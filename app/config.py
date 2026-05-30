@@ -21,5 +21,14 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    @property
+    def database_url(self) -> str:
+        """Build PostgreSQL URL for SQLAlchemy."""
+        return (
+            "postgresql+psycopg://"
+            f"{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
 
 settings = Settings()

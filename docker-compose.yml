@@ -1,0 +1,89 @@
+services:
+  api:
+    build:
+      context: .
+    container_name: currency_api
+    env_file:
+      - .env.example
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: currency_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-currency_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-currency_password}
+      POSTGRES_DB: ${POSTGRES_DB:-currency_rates}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: currency_redis
+    ports:
+      - "6379:6379"
+
+  airflow-webserver:
+    image: apache/airflow:2.10.4
+    container_name: currency_airflow_webserver
+    env_file:
+      - .env.example
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://currency_user:currency_password@postgres:5432/currency_rates
+      AIRFLOW__WEBSERVER__SECRET_KEY: currency_rates_secret_key
+      _PIP_ADDITIONAL_REQUIREMENTS: pydantic-settings==2.7.1 redis==5.2.1 psycopg[binary]==3.2.3 requests==2.32.3
+      PYTHONPATH: /opt/airflow
+    command: >
+      bash -c "airflow db migrate &&
+      airflow users create
+      --username admin
+      --password admin
+      --firstname Admin
+      --lastname User
+      --role Admin
+      --email admin@example.com || true &&
+      airflow webserver"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./app:/opt/airflow/app
+      - airflow_logs:/opt/airflow/logs
+    depends_on:
+      - postgres
+      - redis
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.4
+    container_name: currency_airflow_scheduler
+    env_file:
+      - .env.example
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://currency_user:currency_password@postgres:5432/currency_rates
+      AIRFLOW__WEBSERVER__SECRET_KEY: currency_rates_secret_key
+      _PIP_ADDITIONAL_REQUIREMENTS: pydantic-settings==2.7.1 redis==5.2.1 psycopg[binary]==3.2.3 requests==2.32.3
+      PYTHONPATH: /opt/airflow
+    command: bash -c "airflow db migrate && airflow scheduler"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./app:/opt/airflow/app
+      - airflow_logs:/opt/airflow/logs
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  postgres_data:
+  airflow_logs:
