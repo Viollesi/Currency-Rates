@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from app.cbr_client import fetch_rates_xml, parse_rates_xml
-from app.database import SessionLocal
+from app.database import create_session
 from app.redis_client import cache_latest_rates
 from app.repositories import RateRepository, RawRateRepository
 
@@ -21,7 +21,7 @@ def load_raw_rates(xml_text: str) -> list[dict[str, Any]]:
     """Save raw XML and return parsed rates."""
     rate_date, rates = parse_rates_xml(xml_text)
 
-    with SessionLocal() as session:
+    with create_session() as session:
         RawRateRepository(session).save(rate_date=rate_date, raw_xml=xml_text)
 
     logger.info("Сырой ответ ЦБ РФ сохранен в PostgreSQL")
@@ -36,7 +36,7 @@ def transform_rates(rates: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def save_rates(rates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Save normalized rates to PostgreSQL."""
-    with SessionLocal() as session:
+    with create_session() as session:
         saved_rates = RateRepository(session).save_many(rates)
 
     logger.info(

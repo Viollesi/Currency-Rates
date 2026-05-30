@@ -7,7 +7,6 @@ from airflow.operators.python import PythonOperator
 
 from app.etl import run_pipeline
 
-
 with DAG(
     dag_id="currency_rates_etl",
     description="Загрузка курсов валют из ЦБ РФ",

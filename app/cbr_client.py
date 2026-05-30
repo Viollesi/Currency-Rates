@@ -1,8 +1,8 @@
 """Client for the Central Bank of Russia currency rates."""
 
-from datetime import date, datetime
 import logging
 import xml.etree.ElementTree as ET
+from datetime import date, datetime
 
 import requests
 
